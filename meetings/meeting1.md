@@ -7,7 +7,7 @@
 | Next meeting | 30 September 2026 |
 | Author | Ziyad |
 
-## Statement of Contribution and Self-reflection
+## Progress check
 - Ziyad: Set up the codebase, wrote some comments, and uploaded CSV data to the repo. Also writing meeting minutes this week (but we'll take turns doing this). I didn't have a good idea of what the assignment was actually about until I actually took the time to do some reading today. I have much more clarity now, which is great, and I'm excited to get deeper into the project and analyse the data. 
 - Pranshu: Helped with research and understanding one of the datasets. 
 
