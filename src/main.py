@@ -1,27 +1,44 @@
-# TODO DEVELOP A DETAILED METHODOLOGY FOR PROCESSING THE DATA.. NEED TO DO LOTS OF RESEARCH AND LEARN SOME THEORY
-# - write a brief outline of each dataset --> how its relevant to identifying globular clusters
-# - design an analysis method for the datasets, including a set of criteria for deciding whether a globular cluster is likely to have been accreted
-# - come up with a draft structure for our code --> modules for (1) parsing raw data, (2) doing analysis on this data, and (3) displaying results
+"""
+PHYS3116 Assignment - Option 1: Accreted Milky Way Globular Clusters
 
-import matplotlib as plt
-import numpy as np
-import pandas as pd
+Entry point. Runs the three stages in order:
+
+    data_prep        load the Harris, Krause and VandenBerg catalogues, reconcile
+                     cluster names, merge, attach the reference classifications
+    exploratory      descriptive figures, label-free
+    method_design    logistic regression on a designed feature vector
+
+Run with:  python src/main.py
+Figures are written to figures/. See docs/methodology.md for the method write-up.
+
+Reference for the in-situ/accreted labels:
+    Belokurov & Kravtsov (2024), MNRAS 528, 3198 (arXiv:2309.15902), Appendix D.
+"""
+
+# Assignment spec
+'''
+Using data from the Harris Catalogue of Milky Way globular clusters and van den Berg et al. (2013),
+use stellar population (metallicities [Fe/H] and ages) and dynamical information to identify potentially
+accreted globular clusters. Consider if there are some globular clusters that stand out in the agemetallicity 
+relation or that do not rotate with the bulk of other globular clusters.
+Consider what the above findings might mean for how the Milky Way formed and how many of its
+globular clusters could be accreted and how many may have formed within the Milky Way. Consider
+what further tests could be performed to delineate various possible formation scenarios.
+
+'''
+
+from data_prep import prepare_data
+from exploratory import exploratory_analysis
+from method_design import method_design
 
 
-# import data
-data_filepaths = {
-    'HarrisPartI': '../data/HarrisPartI.csv',
-    'HarrisPartIII': '../data/HarrisPartIII.csv',
-    'Krause21': '../data/Krause21.csv',
-    'vandenBerg': '../data/vandenBerg_table2.csv'
-}
+def main():
+    """Run the full pipeline and return the merged catalogue."""
+    merged = prepare_data()
+    exploratory_analysis(merged)
+    method_design(merged)
+    return merged
 
-HarrisParti_df = pd.read_csv(data_filepaths['HarrisPartI'])
-HarrisPartiii_df = pd.read_csv(data_filepaths['HarrisPartIII'])
-Krause21_df = pd.read_csv(data_filepaths['Krause21'])
-Vandenberg_df = pd.read_csv(data_filepaths['vandenBerg'])
 
-# print(HarrisParti_df.head(3))
-# print(HarrisPartiii_df.head(3))
-# print(Krause21_df.head(3))
-print(Vandenberg_df.head(3))
+if __name__ == '__main__':
+    main()
