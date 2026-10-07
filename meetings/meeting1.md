@@ -78,7 +78,7 @@ A dataset for studying star cluster formation and evolution. Our sample contains
 
 | Field   | Description | Units |
 |---------|-------------|-------|
-| `Mstar` | Total stellar mass of the cluster, given as log(M★/M☉) | log(M☉) |
+| `Mstar` | Total stellar mass of the cluster. Linear, **not** a log — see the correction note below | 10⁵ M☉ |
 | `rh`    | Half-mass (or half-light) radius, r_h: the radius that contains half the cluster's mass or light | pc |
 | `C5`    | Compactness index, C₅ (defined below) | — |
 
@@ -98,6 +98,21 @@ C_5 = \frac{M_\star / 10^5\,M_\odot}{r_h / \text{pc}}
 $$
 
 C₅ tracks how deep the cluster's gravitational potential well is. Clusters with C₅ > 1 are generally thought to be able to hold on to gas enriched by their first stars, so they can form multiple stellar populations. 
+
+> **Correction (3 Oct 2026).** Two of the unit descriptions above were wrong in the original
+> write-up of these minutes, and both have been fixed in the tables.
+>
+> - **`Mstar` is linear, in units of 10⁵ M☉, not log(M★/M☉).** Taking it as a log would give
+>   NGC 288 a stellar mass of 10^0.46 ≈ 2.9 M☉. The definition of C₅ above settles it: the
+>   published C₅ reproduces `Mstar / rh` to rounding, and is off by ~7×10⁶ under the log
+>   reading.
+> - **`log_sigma_0` is a central surface mass density, log(M☉/pc²), not a velocity
+>   dispersion.** Across the 55 clusters it shares with Harris it correlates at 0.97 with
+>   Harris's central *density* `rho_0` but only 0.81 with log of the measured dispersion
+>   `sig_v`. Converting `rho_0` from a volume to a surface density through the core diameter
+>   leaves a 0.29 dex offset — a mass-to-light ratio of ≈1.9, which is normal for a globular
+>   cluster. Note this was inferred from the numbers; it has not yet been checked against
+>   VandenBerg et al. (2013) Table 2 directly, so confirm before quoting it in the report.
 
 ### VandenBerg Globular Cluster Ages Dataset
 
@@ -130,7 +145,7 @@ Ages and properties for 55 Galactic globular clusters, from VandenBerg et al. (2
 | `R_G`         | Galactocentric distance | kpc |
 | `M_V`         | Integrated absolute V magnitude; more negative means brighter | mag |
 | `v_e0`        | Central escape velocity, a measure of potential-well depth | km/s |
-| `log_sigma_0` | log 10 central velocity dispersion | log(km/s) |
+| `log_sigma_0` | Central **surface mass density**, given as log — **not** a velocity dispersion, despite the column name. See the correction note below | log(M☉/pc²) |
 
 
 ### The general plan for this assessment
