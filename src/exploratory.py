@@ -11,11 +11,8 @@ import numpy as np
 
 from config import save_figure
 
-
 # ---- 2.1 The age-metallicity relation ----
-# Expected signature: two sequences. In-situ clusters are older by ~0.5 Gyr at fixed
-# [Fe/H] below -1.5 and by >=1 Gyr above it. The accreted candidates are the younger,
-# metal-poorer branch.
+# Expected signature: accreted GCs are younger and less metal rich
 
 def plot_age_metallicity(merged):
     """Plot Age against [Fe/H] and test whether it splits into two branches."""
@@ -44,9 +41,7 @@ def plot_age_metallicity(merged):
         axis.grid(alpha=0.3)
     save_figure(figure, 'age_metallicity.png')
 
-    # The comparison must be made at fixed metallicity. Age and [Fe/H] are correlated
-    # across the sample, so a flat age cut just recovers that correlation and shows
-    # nothing. Residuals about the fitted trend remove it.
+    # The comparison must be made at fixed metallicity. 
     slope, intercept = np.polyfit(sample['FeH_vdb'], sample['Age_vdb'], 1)
     residual = sample['Age_vdb'] - (slope * sample['FeH_vdb'] + intercept)
 
@@ -56,8 +51,7 @@ def plot_age_metallicity(merged):
         print(f'    {label}: n = {len(subset):2d},'
               f' median R_gc = {subset["R_gc"].median():5.1f} kpc')
 
-    # Named outliers answer the spec question about clusters that "stand out in the
-    # age-metallicity relation".
+    # Outliers.. spec mentions it
     print('    most discrepant (youngest for their metallicity):')
     for _, row in sample.assign(residual=residual).nsmallest(5, 'residual').iterrows():
         print(f'      {row["ID"]:<12s} [Fe/H] = {row["FeH_vdb"]:+.2f},'
