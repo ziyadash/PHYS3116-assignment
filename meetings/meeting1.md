@@ -23,8 +23,8 @@ The Harris catalogue is the standard reference compilation of parameters for the
 
 | Field  | Description | Units |
 |--------|-------------|-------|
-| `ID`   | Cluster identifier (e.g. NGC 104), used as the join key | — |
-| `Name` | Common or alternative name (e.g. 47 Tuc), where one exists | — |
+| `ID`   | Cluster identifier (e.g. NGC 104), used as the join key | - |
+| `Name` | Common or alternative name (e.g. 47 Tuc), where one exists | - |
 | `RA`   | Right Ascension (J2000) | hms |
 | `DEC`  | Declination (J2000) | dms |
 | `L`    | Galactic longitude | degrees |
@@ -54,7 +54,7 @@ The Harris catalogue is the standard reference compilation of parameters for the
 
 | Field    | Description | Units |
 |----------|-------------|-------|
-| `c`      | King-model central concentration, c = log(r_t / r_c), where r_t is the tidal radius. Core-collapsed clusters are assigned c = 2.5 | — |
+| `c`      | King-model central concentration, c = log(r_t / r_c), where r_t is the tidal radius. Core-collapsed clusters are assigned c = 2.5 | - |
 | `r_c`    | Core radius | arcmin |
 | `r_h`    | Half-light radius (radius containing half the cluster's total light) | arcmin |
 | `mu_V`   | Central surface brightness in the V band | mag/arcsec² |
@@ -70,17 +70,17 @@ A dataset for studying star cluster formation and evolution. Our sample contains
 
 | Field     | Description | Units |
 |-----------|-------------|-------|
-| `Object`  | Main catalogue name of the cluster, usually from the NGC, IC or Messier (M) catalogues | — |
-| `AltName` | Other names for the same cluster (e.g. M13 is also NGC 6205) | — |
-| `Class`   | Cluster type. Every entry in this sample is `GC` (globular cluster), so this column carries no information here | — |
+| `Object`  | Main catalogue name of the cluster, usually from the NGC, IC or Messier (M) catalogues | - |
+| `AltName` | Other names for the same cluster (e.g. M13 is also NGC 6205) | - |
+| `Class`   | Cluster type. Every entry in this sample is `GC` (globular cluster), so this column carries no information here | - |
 
 #### Physical Parameters
 
 | Field   | Description | Units |
 |---------|-------------|-------|
-| `Mstar` | Total stellar mass of the cluster. Linear, **not** a log — see the correction note below | 10⁵ M☉ |
+| `Mstar` | Total stellar mass of the cluster. Linear, **not** a log. See the correction note below | 10⁵ M☉ |
 | `rh`    | Half-mass (or half-light) radius, r_h: the radius that contains half the cluster's mass or light | pc |
-| `C5`    | Compactness index, C₅ (defined below) | — |
+| `C5`    | Compactness index, C₅ (defined below) | - |
 
 #### Evolution and Chemistry
 
@@ -110,7 +110,7 @@ C₅ tracks how deep the cluster's gravitational potential well is. Clusters wit
 >   dispersion.** Across the 55 clusters it shares with Harris it correlates at 0.97 with
 >   Harris's central *density* `rho_0` but only 0.81 with log of the measured dispersion
 >   `sig_v`. Converting `rho_0` from a volume to a surface density through the core diameter
->   leaves a 0.29 dex offset — a mass-to-light ratio of ≈1.9, which is normal for a globular
+>   leaves a 0.29 dex offset, a mass-to-light ratio of ≈1.9, which is normal for a globular
 >   cluster. Note this was inferred from the numbers; it has not yet been checked against
 >   VandenBerg et al. (2013) Table 2 directly, so confirm before quoting it in the report.
 
@@ -122,9 +122,9 @@ Ages and properties for 55 Galactic globular clusters, from VandenBerg et al. (2
 
 | Field     | Description | Units |
 |-----------|-------------|-------|
-| `dataset` | Source flag for the catalogue subset | — |
-| `NGC`     | New General Catalogue number (e.g. 5272 for M3) | — |
-| `Name`    | Common alternative name, e.g. Messier number | — |
+| `dataset` | Source flag for the catalogue subset | - |
+| `NGC`     | New General Catalogue number (e.g. 5272 for M3) | - |
+| `Name`    | Common alternative name, e.g. Messier number | - |
 
 #### Ages and Chemistry
 
@@ -133,10 +133,10 @@ Ages and properties for 55 Galactic globular clusters, from VandenBerg et al. (2
 | `FeH`     | Metallicity [Fe/H]: log iron-to-hydrogen ratio relative to the Sun | dex |
 | `Age`     | Absolute age, from fits to Victoria-Regina isochrones | Gyr |
 | `Age_err` | Uncertainty in `Age` | Gyr |
-| `Method`  | Age-dating technique, e.g. the ΔV(HB–TO) method (magnitude gap between the main-sequence turnoff and the horizontal branch) | — |
-| `Figs`    | Figure numbers in the source paper showing the cluster's fit | — |
-| `Range`   | Range of the colour–magnitude diagram used in the fit | — |
-| `HBtype`  | Horizontal-branch morphology, (B − R)/(B + V + R). Runs from −1 (all red) to +1 (all blue) | — |
+| `Method`  | Age-dating technique, e.g. the ΔV(HB-TO) method (magnitude gap between the main-sequence turnoff and the horizontal branch) | - |
+| `Figs`    | Figure numbers in the source paper showing the cluster's fit | - |
+| `Range`   | Range of the colour-magnitude diagram used in the fit | - |
+| `HBtype`  | Horizontal-branch morphology, (B − R)/(B + V + R). Runs from −1 (all red) to +1 (all blue) | - |
 
 #### Position and Dynamics
 
@@ -145,7 +145,7 @@ Ages and properties for 55 Galactic globular clusters, from VandenBerg et al. (2
 | `R_G`         | Galactocentric distance | kpc |
 | `M_V`         | Integrated absolute V magnitude; more negative means brighter | mag |
 | `v_e0`        | Central escape velocity, a measure of potential-well depth | km/s |
-| `log_sigma_0` | Central **surface mass density**, given as log — **not** a velocity dispersion, despite the column name. See the correction note below | log(M☉/pc²) |
+| `log_sigma_0` | Central **surface mass density**, given as log. **Not** a velocity dispersion, despite the column name. See the correction note below | log(M☉/pc²) |
 
 
 ### The general plan for this assessment
@@ -162,12 +162,12 @@ Now we have a good feel of the data, and of our objectives. In the time leading 
 - [ ] Read the reference paper and see if it has any classifications of its own so we can use it as 'ground truth.'
 
 **Exploratory analysis**
-- [ ] Plot the age–metallicity relation (`Age` vs `FeH`) and check whether it splits into two branches. Do research into what to expect.
+- [ ] Plot the age-metallicity relation (`Age` vs `FeH`) and check whether it splits into two branches. Do research into what to expect.
 - [ ] Compare the spatial and kinematic distributions (`R_gc`, `Z`, `v_r`) of the labelled groups. Again, do research into what to expect.
 - [ ] Compare structural properties (`rh`, `C5`, `c`, `HBtype`) between the labelled groups to see which features separate them.
 
 **Method design**
-- [ ] Propose at least one rule-based classifier (e.g. a dividing line in the age–metallicity plane) and at least one data-driven approach (e.g. clustering or logistic regression on the selected features).
+- [ ] Propose at least one rule-based classifier (e.g. a dividing line in the age-metallicity plane) and at least one data-driven approach (e.g. clustering or logistic regression on the selected features).
 - [ ] Define how we'll evaluate each method against the reference labels (e.g. accuracy, confusion matrix), with the small sample size in mind.
 
 **Next meeting**
