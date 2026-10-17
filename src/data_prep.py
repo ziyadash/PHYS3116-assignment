@@ -14,15 +14,17 @@ import pandas as pd
 
 from config import DATA_FILEPATHS
 
-# Each catalogue names the same cluster differently: Harris 'NGC 104' / 'Pal 12',
-# Krause 'NGC104' / 'Palomar12', VandenBerg a bare NGC number plus a common name.
-# All reduce to a PREFIX+NUMBER key, e.g. 'NGC104', 'PAL12', 'TERZAN8'.
+# Three catalogues, three opinions on how to spell the same cluster. Harris says
+# 'NGC 104' and 'Pal 12', Krause says 'NGC104' and 'Palomar12', VandenBerg just gives a
+# bare number and hopes you work it out. We flatten all of it to PREFIX+NUMBER, so
+# everyone ends up at 'NGC104', 'PAL12', 'TERZAN8' whether they like it or not.
 NAME_PREFIX_ALIASES = {'PALOMAR': 'PAL', 'RUPRECHT': 'RUP', 'TER': 'TERZAN'}
 
 EXPLICIT_NAME_OVERRIDES = {
-    # VandenBerg writes Arp 2 as 'Arp21'. No Arp 21 exists in Harris, and VandenBerg's
-    # sample includes the Sagittarius clusters, so the trailing digit is a footnote
-    # marker. Belokurov & Kravtsov's Table D1 lists 'Arp 2', confirming this.
+    # The 'Arp21' trap. There is no Arp 21, it is Arp 2 with a footnote marker glued
+    # to the end. Harris has no Arp 21 either, VandenBerg's sample includes the
+    # Sagittarius clusters, and Belokurov & Kravtsov's Table D1 says 'Arp 2'. Three
+    # independent witnesses, case closed.
     'ARP21': 'ARP2',
     # Belokurov & Kravtsov spell three Harris clusters differently.
     '2MASSGC01': '2MSGC01',
@@ -73,15 +75,18 @@ def load_catalogues():
     return harris_i, harris_iii, krause, vandenberg
 
 
-# Age and [Fe/H] appear in both Krause and VandenBerg on different scales - ages differ
-# by up to 3.4 Gyr for the same cluster - so they stay in separate suffixed columns and
-# must not be pooled. VandenBerg is the primary source: it is named in the spec and
+# WARNING, DO NOT POOL THESE. Krause and VandenBerg both give Age and [Fe/H], but on
+# different scales, and they disagree by as much as 3.4 Gyr on the same cluster.
+# Averaging them would smear out the exact structure we are hunting for. They stay in
+# separate suffixed columns. VandenBerg wins the tiebreak: the spec names it, and it
 # quotes per-cluster uncertainties.
 #
-# Column units worth noting, both corrected against the data (see meeting 1):
-#   Mstar       linear, in 1e5 Msun - not a log
-#   log_sigma_0 central surface mass density, log(Msun/pc^2) - not a velocity dispersion
-#   R_G         identical to Harris R_gc to 0.000 kpc, so it is dropped as a duplicate
+# Columns that are not what they look like (all three confirmed against the numbers,
+# see meeting 1):
+#   Mstar       linear, in 1e5 Msun. Not a log, despite what we first wrote down
+#   log_sigma_0 a surface mass density, log(Msun/pc^2). The name says velocity
+#               dispersion. The name is lying
+#   R_G         matches Harris R_gc to 0.000 kpc, i.e. it IS R_gc wearing a hat. Dropped
 
 def merge_catalogues(harris_i, harris_iii, krause, vandenberg):
     """Join the four tables into one row-per-cluster dataframe."""

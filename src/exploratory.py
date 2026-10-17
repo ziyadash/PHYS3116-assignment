@@ -1,7 +1,7 @@
 """
 Exploratory analysis.
 
-Descriptive only - this module looks for structure a classifier could exploit, it does
+Descriptive only. This module looks for structure a classifier could exploit; it does
 not classify. The reference labels exist but are deliberately not used here, so that the
 structure found is independent of them.
 """
@@ -41,7 +41,9 @@ def plot_age_metallicity(merged):
         axis.grid(alpha=0.3)
     save_figure(figure, 'age_metallicity.png')
 
-    # The comparison must be made at fixed metallicity. 
+    # Do this at fixed metallicity or it tells you nothing. Age and [Fe/H] already
+    # march together across the sample, so slicing on raw age just rediscovers that
+    # correlation and looks like a result. Residuals about the trend strip it out.
     slope, intercept = np.polyfit(sample['FeH_vdb'], sample['Age_vdb'], 1)
     residual = sample['Age_vdb'] - (slope * sample['FeH_vdb'] + intercept)
 
@@ -113,15 +115,16 @@ def plot_spatial_kinematic(merged):
 # at fixed [Fe/H] the horizontal branch reddens with younger age (the 'second parameter'
 # effect), making it an indirect age proxy.
 #
-# Both leads came to nothing - see the ablation in method_design - so this section is
-# kept as the negative result rather than as input to the classifier.
+# Spoiler: neither lead went anywhere, as the ablation in method_design cheerfully
+# confirms. Kept anyway, because "we looked and there was nothing there" is a real
+# result and the report will want it.
 
 def plot_structural_properties(merged):
     """Compare structural parameters that might separate the two populations."""
     print('\n--- 2.3 Structural properties ---')
     figure, axes = plt.subplots(1, 3, figsize=(16, 4.5))
 
-    # Equal mass but larger radius means more weakly bound - the C5 < 1 regime.
+    # Equal mass but larger radius means more weakly bound, the C5 < 1 regime.
     structural = merged[['Mstar_krause', 'rh_krause', 'C5_krause']].dropna()
     points = axes[0].scatter(structural['Mstar_krause'], structural['rh_krause'],
                              c=structural['C5_krause'], cmap='plasma', s=40)
