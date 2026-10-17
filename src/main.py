@@ -1,5 +1,5 @@
 """
-PHYS3116 Assignment - Option 1: Accreted Milky Way Globular Clusters
+PHYS3116 Assignment, Option 1: Accreted Milky Way Globular Clusters
 
 Entry point. Runs the three stages in order:
 
@@ -7,6 +7,7 @@ Entry point. Runs the three stages in order:
                      cluster names, merge, attach the reference classifications
     exploratory      descriptive figures, label-free
     method_design    logistic regression on a designed feature vector
+    rule_baseline    two-parameter rule kept as the comparison for that choice
 
 Run with:  python src/main.py
 Figures are written to figures/. See docs/methodology.md for the method write-up.
@@ -30,6 +31,7 @@ what further tests could be performed to delineate various possible formation sc
 from data_prep import prepare_data
 from exploratory import exploratory_analysis
 from method_design import method_design
+from rule_baseline import rule_baseline
 
 
 def main():
@@ -37,6 +39,7 @@ def main():
     merged = prepare_data()
     exploratory_analysis(merged)
     method_design(merged)
+    rule_baseline(merged)
     return merged
 
 
