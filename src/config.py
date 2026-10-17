@@ -20,6 +20,7 @@ DATA_FILEPATHS = {
     'Krause21': DATA_DIR / 'Krause21.csv',
     'vandenBerg': DATA_DIR / 'vandenBerg_table2.csv',
     'labels': DATA_DIR / 'BelokurovKravtsov24_tableD1.csv',
+    'orbits': DATA_DIR / 'Baumgardt_orbits.txt',
 }
 
 # Cross-validation settings, shared so every reported score uses the same protocol.

@@ -114,6 +114,51 @@ def merge_catalogues(harris_i, harris_iii, krause, vandenberg):
     })
 
 
+# Baumgardt's orbit table, from people.smp.uq.edu.au/HolgerBaumgardt/globular/, retrieved
+# 17 Oct 2026. This is the Gaia-derived one, so it finally gives us proper motions and
+# full space velocities instead of the line-of-sight-only view Harris offers.
+#
+# Whitespace-delimited with a three-line comment header, and the header reuses names like
+# 'Delta_R' for different columns, so the names below are supplied by hand in the order
+# the file's own numbered (1)...(31) line defines them.
+ORBIT_COLUMNS = [
+    'Cluster', 'RA_bg', 'DEC_bg', 'l_bg', 'b_bg', 'Rsun_bg', 'Delta_Rsun', 'R_GC_bg',
+    'RV_bg', 'ERV_bg', 'mualpha', 'Del_mualpha', 'mudelta', 'Del_mudelta', 'corr',
+    'X_gc', 'Delta_X', 'Y_gc', 'Delta_Y', 'Z_gc', 'Delta_Z',
+    'U_gc', 'Delta_U', 'V_gc', 'Delta_V', 'W_gc', 'Delta_W',
+    'R_Per', 'Delta_R_Per', 'R_Apo', 'Delta_R_Apo',
+]
+
+
+def load_orbits():
+    """Read Baumgardt's orbit table and derive the orbital quantities we care about."""
+    orbits = pd.read_csv(
+        DATA_FILEPATHS['orbits'], sep=r'\s+', comment='#', names=ORBIT_COLUMNS,
+    )
+    orbits['key'] = orbits['Cluster'].map(canonical_key)
+
+    # X, Y, Z here are genuinely galactocentric!
+    radius_in_plane = np.hypot(orbits['X_gc'], orbits['Y_gc'])
+
+    # Lz, the vertical angular momentum.
+    orbits['Lz'] = orbits['X_gc'] * orbits['V_gc'] - orbits['Y_gc'] * orbits['U_gc']
+
+    # V_phi, the azimuthal velocity.
+    orbits['V_phi'] = orbits['Lz'] / radius_in_plane
+
+    # Eccentricity straight off the integrated orbit.
+    orbits['ecc'] = ((orbits['R_Apo'] - orbits['R_Per'])
+                     / (orbits['R_Apo'] + orbits['R_Per']))
+
+    return orbits
+
+
+def attach_orbits(merged, orbits):
+    """Add the derived orbital columns to the merged catalogue."""
+    keep = ['key', 'V_phi', 'Lz', 'ecc', 'R_Apo', 'R_Per', 'mualpha', 'mudelta']
+    return merged.merge(orbits[keep], on='key', how='left')
+
+
 def attach_labels(merged):
     """Join the Belokurov & Kravtsov Table D1 classifications onto the catalogue.
 
@@ -138,7 +183,9 @@ def prepare_data():
     print('=' * 76)
 
     harris_i, harris_iii, krause, vandenberg = load_catalogues()
-    merged = attach_labels(merge_catalogues(harris_i, harris_iii, krause, vandenberg))
+    merged = merge_catalogues(harris_i, harris_iii, krause, vandenberg)
+    merged = attach_orbits(merged, load_orbits())
+    merged = attach_labels(merged)
 
     # Match rates guard the name standardisation: anything unmatched is a key that
     # needs an alias or an override above.
@@ -147,12 +194,14 @@ def prepare_data():
           f' / {len(krause)}')
     print(f'VandenBerg matched:         {vandenberg["key"].isin(merged["key"]).sum()}'
           f' / {len(vandenberg)}')
+    print(f'Baumgardt orbits matched:   {int(merged["V_phi"].notna().sum())} / {len(merged)}')
     print(f'Reference labels attached:  {int(merged["accreted"].notna().sum())}')
 
     # Completeness of the columns that gate the analysis. Harris Part II holds [Fe/H]
     # and is not in data/, so metallicity is limited to the clusters VandenBerg covers.
     print('\nCompleteness of the columns the analysis depends on:')
-    for column in ['R_gc', 'Z', 'v_r', 'FeH_vdb', 'Age_vdb', 'HBtype', 'accreted']:
+    for column in ['R_gc', 'Z', 'v_r', 'FeH_vdb', 'Age_vdb', 'HBtype',
+                   'V_phi', 'Lz', 'ecc', 'accreted']:
         present = int(merged[column].notna().sum())
         print(f'  {column:<10} {present:>4} / {len(merged)}'
               f'  ({100 * present / len(merged):4.1f}%)')
