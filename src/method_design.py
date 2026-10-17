@@ -5,7 +5,7 @@ globular cluster as accreted or in-situ.
 A ceiling applies. The reference labels come from orbital energy and angular momentum,
 neither of which is in these catalogues, so the model cannot reproduce them exactly.
 Worse, galactocentric distance partly proxies orbital energy, so a high score is not
-automatically a stellar-population result - `report_ablation` quantifies that.
+automatically a stellar-population result, and `report_ablation` quantifies that.
 
 See docs/methodology.md for the comparison and the recommendation.
 """
@@ -30,9 +30,6 @@ REQUIRED_COLUMNS = ['accreted', 'FeH_vdb', 'Age_vdb', 'R_gc', 'Z', 'HBtype']
 #               ~0.5+ for an isotropic halo one
 #   HBtype      the second-parameter effect makes HB morphology an age proxy at fixed
 #               [Fe/H]
-#
-# The ablation refutes the last two: HBtype scores below chance alone and flattening
-# adds nothing, so the model uses only the three that earn their place.
 FEATURE_NAMES = ['FeH', 'delta_age', 'log_R_gc', 'flattening', 'HBtype']
 
 FEATURE_SETS = {
@@ -114,7 +111,7 @@ def roc_auc(y_true, scores):
 
 
 def classification_scores(y_true, y_predicted, scores=None):
-    """Accuracy, balanced accuracy, the confusion counts and (optionally) ROC AUC."""
+    """Balanced accuracy, recall, the confusion counts.. ROC AUC."""
     counts = {
         'tp': int(((y_predicted == 1) & (y_true == 1)).sum()),
         'tn': int(((y_predicted == 0) & (y_true == 0)).sum()),
@@ -124,11 +121,11 @@ def classification_scores(y_true, y_predicted, scores=None):
     recall = counts['tp'] / max(counts['tp'] + counts['fn'], 1)
     specificity = counts['tn'] / max(counts['tn'] + counts['fp'], 1)
 
+    # Keeping the raw counts means anyone who misses precision can rebuild it in their
+    # head: tp / (tp + fp). No information was harmed in the making of this cut.
     return counts | {
-        'accuracy': (counts['tp'] + counts['tn']) / len(y_true),
         'balanced_accuracy': 0.5 * (recall + specificity),
         'recall': recall,
-        'precision': counts['tp'] / max(counts['tp'] + counts['fp'], 1),
         'roc_auc': roc_auc(y_true, scores) if scores is not None else None,
     }
 
@@ -209,12 +206,11 @@ def method_design(merged):
     )
 
     print(f'\n--- {N_FOLDS}-fold stratified cross-validation ---')
-    print(f'{"":<22}{"acc":>7}{"bal acc":>9}{"recall":>8}{"prec":>7}{"AUC":>7}')
-    print('-' * 60)
+    print(f'{"":<22}{"bal acc":>9}{"recall":>8}{"AUC":>7}')
+    print('-' * 46)
     for label, r in [('majority baseline', baseline), ('logistic (3 feat)', scores)]:
         auc = f'{r["roc_auc"]:.3f}' if r['roc_auc'] is not None else '   -  '
-        print(f'{label:<22}{r["accuracy"]:>7.3f}{r["balanced_accuracy"]:>9.3f}'
-              f'{r["recall"]:>8.3f}{r["precision"]:>7.3f}{auc:>7}')
+        print(f'{label:<22}{r["balanced_accuracy"]:>9.3f}{r["recall"]:>8.3f}{auc:>7}')
     print(f'\nConfusion (accreted = positive):  TP={scores["tp"]} FP={scores["fp"]}'
           f' FN={scores["fn"]} TN={scores["tn"]}')
 
