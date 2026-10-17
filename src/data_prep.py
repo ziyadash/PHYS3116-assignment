@@ -18,7 +18,9 @@ from config import DATA_FILEPATHS
 # 'NGC 104' and 'Pal 12', Krause says 'NGC104' and 'Palomar12', VandenBerg just gives a
 # bare number and hopes you work it out. We flatten all of it to PREFIX+NUMBER, so
 # everyone ends up at 'NGC104', 'PAL12', 'TERZAN8' whether they like it or not.
-NAME_PREFIX_ALIASES = {'PALOMAR': 'PAL', 'RUPRECHT': 'RUP', 'TER': 'TERZAN'}
+NAME_PREFIX_ALIASES = {'PALOMAR': 'PAL', 'RUPRECHT': 'RUP', 'TER': 'TERZAN',
+                       # Baumgardt writes Djor_1, everyone else writes Djorg 1.
+                       'DJOR': 'DJORG'}
 
 EXPLICIT_NAME_OVERRIDES = {
     # The 'Arp21' trap. There is no Arp 21, it is Arp 2 with a footnote marker glued

@@ -5,10 +5,10 @@ Per-cluster output is in `results/classifications.csv`.
 
 ## Headline
 
-- **50 of 149 clusters classified as accreted, 34 per cent.** Belokurov & Kravtsov get
+- **51 of 151 clusters classified as accreted, 34 per cent.** Belokurov & Kravtsov get
   35 per cent on their own sample, so the two agree on the overall split.
-- We disagree with their published label on **3 clusters only**: NGC 5053, NGC 5272 and
-  Pal 5. All three are borderline, with predicted probabilities between 0.36 and 0.49.
+- We disagree with their published label on **2 clusters only**: NGC 5053 and Pal 5.
+  Both are borderline, with predicted probabilities of 0.34 and 0.40.
 
 ## Which clusters stand out in the age-metallicity relation
 
@@ -29,7 +29,7 @@ Per-cluster output is in `results/classifications.csv`.
   **+131 km/s**, against **+75 km/s** for the metal-poor in-situ ones.
 - Accreted clusters are on much more radial orbits, median eccentricity **0.77** against
   **0.52**, and reach far further out, median apocentre **28.6 kpc** against **4.0 kpc**.
-- **44 of 149 clusters counter-rotate.** The least-rotating are NGC 362, NGC 6712,
+- **45 of 151 clusters counter-rotate.** The least-rotating are NGC 362, NGC 6712,
   NGC 6681, NGC 6981 and Pal 2, all on high-eccentricity orbits.
 - This reproduces Belokurov & Kravtsov's reported rotation result from an independent
   derivation, which is a check on our orbital quantities as much as a result.
@@ -39,9 +39,10 @@ Per-cluster output is in `results/classifications.csv`.
 | model | n | AUC | balanced accuracy | recall |
 |---|---|---|---|---|
 | stellar populations only | 55 | 0.929 | 0.893 | 0.920 |
-| orbital only | 149 | 0.998 | 0.972 | 0.943 |
+| orbital only | 151 | 0.999 | 0.981 | 0.962 |
 
-- The orbital model is **near perfect, and that is the problem, not the achievement.**
+- The orbital model misclassifies 3 of 151 clusters. That is **the problem, not the
+  achievement.**
   The reference labels are defined from orbital energy and angular momentum, so a model
   given orbital quantities is re-deriving the definition of the labels. It confirms our
   pipeline is correct and tells us nothing astrophysical.
@@ -71,8 +72,9 @@ Per-cluster output is in `results/classifications.csv`.
 | NGC 6584 | accreted | 0.468 | [Al/Fe] and [Mg/Fe] consistent with in-situ |
 | NGC 5286 | accreted | 0.393 | [Al/Fe] and [Mg/Fe] consistent with in-situ |
 
-- Three of our seven total disagreements land on the five flagged clusters, roughly a
-  fivefold enrichment over chance. With n = 5 this is suggestive, not conclusive.
+- Three of the stellar model's seven disagreements land on the five flagged clusters,
+  roughly a fivefold enrichment over chance. With n = 5 this is suggestive, not
+  conclusive.
 
 ## What this says about the Milky Way
 
