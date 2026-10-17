@@ -161,6 +161,59 @@ def plot_structural_properties(merged):
           f' {int((merged["c"] == 2.5).sum())} clusters affected.')
 
 
+# ---- 2.4 Rotation ----
+# Using the Baumgardt dataset, now we have data about 'proper motions', so we can 
+# get V_phi and do some exploration about rotational motion.
+#
+# Per Belokurov & Kravtsov: in-situ clusters rotate along with the disc,
+# accreted ones sit near zero because their parent dwarf arrived on whatever orbit it
+# happened to arrive on. The metal-rich in-situ clusters should show the strongest
+# rotation, which is the "disc spin-up" they describe.
+
+def plot_rotation(merged):
+    """Plot the rotation diagnostic and name the clusters that do not rotate."""
+    print('\n--- 2.4 Rotation ---')
+    sample = merged.dropna(subset=['V_phi', 'R_gc'])
+    print(f'    {len(sample)} clusters with a space velocity (Baumgardt)')
+
+    figure, axes = plt.subplots(1, 3, figsize=(16, 4.5))
+
+    axes[0].hist(sample['V_phi'], bins=30)
+    axes[0].axvline(0, color='red', linestyle='--', label='no rotation')
+    axes[0].set_xlabel(r'$V_\phi$ (km/s)')
+    axes[0].set_ylabel('number of clusters')
+    axes[0].set_title('Rotation velocity')
+    axes[0].legend()
+
+    # The spin-up plot. Rotation should switch on above [Fe/H] of about -1.3.
+    chem = merged.dropna(subset=['V_phi', 'FeH_vdb'])
+    axes[1].scatter(chem['FeH_vdb'], chem['V_phi'], s=35, alpha=0.8)
+    axes[1].axhline(0, color='red', linestyle='--')
+    axes[1].set_xlabel('[Fe/H] (dex)')
+    axes[1].set_ylabel(r'$V_\phi$ (km/s)')
+    axes[1].set_title(f'Disc spin-up (n = {len(chem)})')
+    axes[1].grid(alpha=0.3)
+
+    # Rotation against eccentricity. Radial orbits do not rotate, by construction, so
+    # the two should trade off against each other.
+    axes[2].scatter(sample['ecc'], sample['V_phi'], s=25, alpha=0.7)
+    axes[2].axhline(0, color='red', linestyle='--')
+    axes[2].set_xlabel('eccentricity')
+    axes[2].set_ylabel(r'$V_\phi$ (km/s)')
+    axes[2].set_title('Rotation vs orbit shape')
+    axes[2].grid(alpha=0.3)
+
+    save_figure(figure, 'rotation.png')
+
+    counter = (sample['V_phi'] < 0).sum()
+    print(f'    median V_phi = {sample["V_phi"].median():+.1f} km/s,'
+          f' {counter} clusters counter-rotating')
+    print('    least rotating (closest to zero, i.e. not joining in):')
+    for _, row in sample.assign(a=sample['V_phi'].abs()).nsmallest(5, 'a').iterrows():
+        print(f'      {row["ID"]:<12s} V_phi = {row["V_phi"]:+7.1f} km/s,'
+              f' ecc = {row["ecc"]:.2f}, R_gc = {row["R_gc"]:.1f} kpc')
+
+
 def exploratory_analysis(merged):
     """Produce the three exploratory figures."""
     print('\n' + '=' * 76)
@@ -170,3 +223,4 @@ def exploratory_analysis(merged):
     plot_age_metallicity(merged)
     plot_spatial_kinematic(merged)
     plot_structural_properties(merged)
+    plot_rotation(merged)
