@@ -1,10 +1,15 @@
 """
-Rule-based baseline: a straight dividing line in the age-metallicity plane.
+Stellar population arm: a dividing line in the age-metallicity plane.
 
-This was the first classifier built for the project. It was not chosen, but it is kept
-here because it is the comparison that justifies choosing the logistic regression, and
-because a two-parameter rule is a meaningful check on whether the heavier model earns
-its place.
+One of the project's two models. This is the arm that uses ages, which the assignment
+specification names as an input and which the dynamical model cannot use, because
+VandenBerg's ages cover only 55 clusters against the 149 the orbital features reach.
+
+Keeping both arms is deliberate rather than historical. Between them they use every
+input the spec names: metallicities and ages here, metallicities and dynamics in
+method_design. This arm is also the only part of the project whose result does not
+depend on orbital quantities, which matters given those quantities are what the
+reference labels were defined from.
 
 The rule comes directly from Belokurov & Kravtsov's result that the two populations
 trace separate age-metallicity sequences, with accreted clusters younger at fixed
@@ -22,9 +27,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from config import N_FOLDS, RANDOM_SEED, save_figure
-from method_design import (
-    REQUIRED_COLUMNS, classification_scores, stratified_folds,
-)
+from method_design import classification_scores, stratified_folds
+
+# The rule is defined in the age-metallicity plane, so unlike the main model it is stuck
+# with VandenBerg's 55 clusters. That gap is itself part of the comparison.
+RULE_COLUMNS = ['accreted', 'FeH_vdb', 'Age_vdb']
 
 # Search grid. The slope range covers every plausible orientation of the boundary and
 # the intercept range spans the full age axis of the sample.
@@ -90,19 +97,19 @@ def plot_decision_boundary(sample, slope, intercept):
               label=f'fitted rule: Age = {slope:+.2f}[Fe/H] + {intercept:.2f}')
     axis.set_xlabel('[Fe/H] (dex)')
     axis.set_ylabel('Age (Gyr)')
-    axis.set_title('Rule-based boundary vs reference labels')
+    axis.set_title('Stellar population model: boundary vs reference labels')
     axis.legend(fontsize=8)
     axis.grid(alpha=0.3)
     save_figure(figure, 'decision_boundary.png')
 
 
 def rule_baseline(merged):
-    """Fit and report the rule-based baseline."""
+    """Fit and report the stellar population model."""
     print('\n' + '=' * 76)
-    print('4. RULE-BASED BASELINE (not the chosen method)')
+    print('4. STELLAR POPULATION MODEL (age-metallicity plane)')
     print('=' * 76)
 
-    sample = merged.dropna(subset=REQUIRED_COLUMNS).reset_index(drop=True)
+    sample = merged.dropna(subset=RULE_COLUMNS).reset_index(drop=True)
     scores, (slope, intercept), _ = evaluate_rule(sample)
 
     print(f'\n{N_FOLDS}-fold stratified cross-validation, n = {len(sample)}')

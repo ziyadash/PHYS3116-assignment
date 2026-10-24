@@ -16,8 +16,8 @@ import numpy as np
 
 from data_prep import canonical_key, load_orbits, prepare_data
 from method_design import (
-    DEFAULT_FEATURES, FEATURE_SETS, ORBITAL_ONLY, ORBITAL_REQUIRED,
-    REQUIRED_COLUMNS, classification_scores, evaluate, roc_auc, stratified_folds,
+    AGE_FEATURE_SETS, DEFAULT_FEATURES, FEATURE_SETS, REQUIRED_COLUMNS,
+    classification_scores, evaluate, roc_auc, stratified_folds,
 )
 
 PASS, FAIL = '  ok  ', ' FAIL '
@@ -105,16 +105,17 @@ def main():
           and scores['recall'] == 1.0 and scores['fp'] == 0 and scores['fn'] == 0)
 
     print('\n--- models beat chance ---')
-    stellar, _, _ = evaluate(sample, FEATURE_SETS['stellar population only'])
-    check('stellar-population model beats chance', stellar['roc_auc'] > 0.8,
-          f'AUC {stellar["roc_auc"]:.3f}')
+    model, _, _ = evaluate(sample, DEFAULT_FEATURES)
+    # This SHOULD be near perfect: the reference labels are a function of orbital
+    # quantities, so anything much below it would mean we had broken the derivation.
+    check('model reproduces the reference labels', model['roc_auc'] > 0.95,
+          f'AUC {model["roc_auc"]:.3f}')
 
-    orbital_sample = merged.dropna(subset=ORBITAL_REQUIRED).reset_index(drop=True)
-    orbital, _, _ = evaluate(orbital_sample, ORBITAL_ONLY)
-    # This one SHOULD be near perfect: the reference labels are a function of orbital
-    # quantities, so anything much below this would mean we had broken the derivation.
-    check('orbital model reproduces the reference labels', orbital['roc_auc'] > 0.95,
-          f'AUC {orbital["roc_auc"]:.3f}')
+    apo, _, _ = evaluate(sample, FEATURE_SETS['log_R_Apo alone'])
+    # Apocentre alone should already be near perfect, because it stands in for the
+    # orbital energy the reference labels were defined from.
+    check('apocentre alone is near perfect', apo['roc_auc'] > 0.95,
+          f'AUC {apo["roc_auc"]:.3f}')
 
     print('\n--- no leakage ---')
     # The age-metallicity trend is fitted per fold. If it were fitted globally the

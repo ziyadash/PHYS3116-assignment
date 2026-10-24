@@ -6,8 +6,9 @@ Entry point. Runs the three stages in order:
     data_prep        load the Harris, Krause and VandenBerg catalogues, reconcile
                      cluster names, merge, attach the reference classifications
     exploratory      descriptive figures, label-free
-    method_design    logistic regression on a designed feature vector
-    rule_baseline    two-parameter rule kept as the comparison for that choice
+    method_design    dynamical arm: logistic regression on metallicity plus orbits
+    rule_baseline    stellar population arm: a dividing line in the age-metallicity
+                     plane, the only model here that uses ages
 
 Run with:  python src/main.py
 Figures are written to figures/. See docs/methodology.md for the method write-up.

@@ -56,6 +56,7 @@ def canonical_key(name):
 def load_catalogues():
     """Read the four CSVs and attach a canonical 'key' column to each."""
     harris_i = pd.read_csv(DATA_FILEPATHS['HarrisPartI'])
+    harris_ii = pd.read_csv(DATA_FILEPATHS['HarrisPartII'])
     harris_iii = pd.read_csv(DATA_FILEPATHS['HarrisPartIII'])
     krause = pd.read_csv(DATA_FILEPATHS['Krause21'])
 
@@ -74,7 +75,7 @@ def load_catalogues():
         vandenberg['Name'].map(canonical_key),
     )
 
-    return harris_i, harris_iii, krause, vandenberg
+    return harris_i, harris_ii, harris_iii, krause, vandenberg
 
 
 # WARNING, DO NOT POOL THESE. Krause and VandenBerg both give Age and [Fe/H], but on
@@ -90,9 +91,14 @@ def load_catalogues():
 #               dispersion. The name is lying
 #   R_G         matches Harris R_gc to 0.000 kpc, i.e. it IS R_gc wearing a hat. Dropped
 
-def merge_catalogues(harris_i, harris_iii, krause, vandenberg):
+def merge_catalogues(harris_i, harris_ii, harris_iii, krause, vandenberg):
     """Join the four tables into one row-per-cluster dataframe."""
     harris = harris_i.merge(harris_iii, on='ID', how='outer', validate='one_to_one')
+    # Part II is where [Fe/H] lives, and it covers 152 of the 157 clusters rather than
+    # VandenBerg's 55. This is what lets the classifier run on the full catalogue.
+    harris = harris.merge(
+        harris_ii.rename(columns={'FeH': 'FeH_harris'}), on='ID', how='left',
+    )
 
     krause_cols = krause[['key', 'AltName', 'Mstar', 'rh', 'C5', 'Age', 'FeH']]
     vandenberg_cols = vandenberg[
@@ -157,7 +163,8 @@ def load_orbits():
 
 def attach_orbits(merged, orbits):
     """Add the derived orbital columns to the merged catalogue."""
-    keep = ['key', 'V_phi', 'Lz', 'ecc', 'R_Apo', 'R_Per', 'mualpha', 'mudelta']
+    keep = ['key', 'V_phi', 'Lz', 'ecc', 'R_Apo', 'Delta_R_Apo', 'R_Per',
+            'mualpha', 'mudelta']
     return merged.merge(orbits[keep], on='key', how='left')
 
 
@@ -178,14 +185,39 @@ def attach_labels(merged):
     return merged
 
 
+def load_holdout_clusters(merged):
+    """Labelled clusters with orbits that are absent from Harris, so never trained on.
+
+    These are the recent discoveries: Gran 1 to 5, the VVV-CL and FSR clusters,
+    Patchick 126, Laevens 3, Crater and Sagittarius II. Harris has not been updated since
+    2010, so they drop out of the main pipeline and make a genuine held-out test set
+    rather than another cross-validation fold.
+    """
+    orbits = load_orbits()
+    labels = pd.read_csv(DATA_FILEPATHS['labels'], comment='#')
+    labels['key'] = labels['Name'].map(canonical_key)
+
+    holdout = orbits.merge(labels[['key', 'insitu', 'Name']], on='key', how='inner')
+    holdout = holdout[~holdout['key'].isin(merged['key'])].copy()
+    holdout['accreted'] = 1 - holdout['insitu']
+
+    # The model only reads orbital columns, but build_feature_matrix touches the stellar
+    # ones too, so they are present and empty. None of these clusters has an age anyway.
+    for column in ['FeH_harris', 'FeH_vdb', 'Age_vdb', 'HBtype']:
+        holdout[column] = np.nan
+    holdout['R_gc'] = holdout['R_GC_bg']
+    holdout['Z'] = holdout['Z_gc']
+    return holdout
+
+
 def prepare_data():
     """Load, key, merge, label and profile the catalogues."""
     print('=' * 76)
     print('1. DATA PREPARATION')
     print('=' * 76)
 
-    harris_i, harris_iii, krause, vandenberg = load_catalogues()
-    merged = merge_catalogues(harris_i, harris_iii, krause, vandenberg)
+    harris_i, harris_ii, harris_iii, krause, vandenberg = load_catalogues()
+    merged = merge_catalogues(harris_i, harris_ii, harris_iii, krause, vandenberg)
     merged = attach_orbits(merged, load_orbits())
     merged = attach_labels(merged)
 
@@ -202,7 +234,7 @@ def prepare_data():
     # Completeness of the columns that gate the analysis. Harris Part II holds [Fe/H]
     # and is not in data/, so metallicity is limited to the clusters VandenBerg covers.
     print('\nCompleteness of the columns the analysis depends on:')
-    for column in ['R_gc', 'Z', 'v_r', 'FeH_vdb', 'Age_vdb', 'HBtype',
+    for column in ['R_gc', 'Z', 'v_r', 'FeH_harris', 'FeH_vdb', 'Age_vdb', 'HBtype',
                    'V_phi', 'Lz', 'ecc', 'accreted']:
         present = int(merged[column].notna().sum())
         print(f'  {column:<10} {present:>4} / {len(merged)}'

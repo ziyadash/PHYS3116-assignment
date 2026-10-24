@@ -16,6 +16,7 @@ FIGURE_DIR = PROJECT_ROOT / 'figures'
 
 DATA_FILEPATHS = {
     'HarrisPartI': DATA_DIR / 'HarrisPartI.csv',
+    'HarrisPartII': DATA_DIR / 'HarrisPartII.csv',
     'HarrisPartIII': DATA_DIR / 'HarrisPartIII.csv',
     'Krause21': DATA_DIR / 'Krause21.csv',
     'vandenBerg': DATA_DIR / 'vandenBerg_table2.csv',

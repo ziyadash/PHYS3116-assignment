@@ -17,8 +17,11 @@ import pandas as pd
 from config import N_FOLDS, RANDOM_SEED, save_figure
 
 # Columns a cluster needs before it can be classified at all.
-REQUIRED_COLUMNS = ['accreted', 'FeH_vdb', 'Age_vdb', 'R_gc', 'Z', 'HBtype',
-                    'V_phi', 'Lz', 'ecc', 'R_Apo']
+REQUIRED_COLUMNS = ['accreted', 'V_phi', 'Lz', 'ecc', 'R_Apo']
+
+# delta_age needs VandenBerg ages, which exist for only 55 clusters. It is kept for the
+# sub-sample check in report_ablation but is deliberately not in the model.
+AGE_COLUMNS = REQUIRED_COLUMNS + ['FeH_vdb', 'Age_vdb']
 
 # Five candidate features, each intended to carry a distinct physical axis:
 #
@@ -36,19 +39,19 @@ FEATURE_NAMES = ['FeH', 'delta_age', 'log_R_gc', 'flattening', 'HBtype',
                  'V_phi', 'Lz', 'ecc', 'log_R_Apo']
 
 FEATURE_SETS = {
-    'stellar + orbital': [0, 1, 5, 6, 7, 8],
-    'stellar population only': [0, 1],
-    'orbital only': [5, 6, 7, 8],
-    'old default (FeH, dAge, logRgc)': [0, 1, 2],
-    'log_R_gc alone': [2],
+    'default (orbital)': [5, 6, 7, 8],
+    'with FeH added back': [0, 5, 6, 7, 8],
+    'log_R_Apo alone': [8],
+    'FeH alone': [0],
+}
+DEFAULT_FEATURES = FEATURE_SETS['default (orbital)']
+
+# Run only on the 55 clusters with ages, so it cannot be compared directly with the
+# rows above. Reported separately for exactly that reason.
+AGE_FEATURE_SETS = {
+    'FeH + delta_age (no orbits)': [0, 1],
     'delta_age alone': [1],
 }
-DEFAULT_FEATURES = FEATURE_SETS['stellar + orbital']
-
-# Orbital features need no ages, so they run on 149 clusters instead of 55. Worth
-# scoring separately, because tripling the sample is not nothing.
-ORBITAL_ONLY = FEATURE_SETS['orbital only']
-ORBITAL_REQUIRED = ['accreted', 'V_phi', 'Lz', 'ecc', 'R_Apo']
 
 
 def build_feature_matrix(frame, age_trend):
@@ -57,7 +60,7 @@ def build_feature_matrix(frame, age_trend):
     feh = frame['FeH_vdb'].to_numpy()
     radius = frame['R_gc'].to_numpy()
     return np.column_stack([
-        feh,
+        frame['FeH_harris'].to_numpy(),
         frame['Age_vdb'].to_numpy() - (slope * feh + intercept),
         np.log10(radius),
         np.abs(frame['Z'].to_numpy()) / radius,
@@ -194,24 +197,44 @@ def report_ablation(sample, seeds=range(10)):
     """
     seeds = list(seeds)
     print(f'\n--- Feature ablation (AUC, mean over {len(seeds)} fold seeds) ---')
-    for label, columns in FEATURE_SETS.items():
-        areas = [evaluate(sample, columns, seed=s)[0]['roc_auc'] for s in seeds]
-        print(f'  {label:<30} {np.mean(areas):.3f} +/- {np.std(areas):.3f}')
+    for label in ['default (orbital)', 'log_R_Apo alone']:
+        areas = [evaluate(sample, FEATURE_SETS[label], seed=s)[0]['roc_auc']
+                 for s in seeds]
+        print(f'  {label:<30} {np.mean(areas):.3f} +/- {np.std(areas):.3f}'
+              f'   n = {len(sample)}')
+
+    # Ages exist for far fewer clusters, so these cannot sit in the same table. They are
+    # here to show what the age information buys when it is available at all.
+    feh_sample = sample.dropna(subset=['FeH_harris']).reset_index(drop=True)
+    for label in ['with FeH added back', 'FeH alone']:
+        areas = [evaluate(feh_sample, FEATURE_SETS[label], seed=s)[0]['roc_auc']
+                 for s in seeds]
+        print(f'  {label:<30} {np.mean(areas):.3f} +/- {np.std(areas):.3f}'
+              f'   n = {len(feh_sample)}')
+
+    age_sample = sample.dropna(subset=['FeH_vdb', 'Age_vdb']).reset_index(drop=True)
+    for label, columns in AGE_FEATURE_SETS.items():
+        areas = [evaluate(age_sample, columns, seed=s)[0]['roc_auc'] for s in seeds]
+        print(f'  {label:<30} {np.mean(areas):.3f} +/- {np.std(areas):.3f}   n = {len(age_sample)}')
 
 
 # ---- Reporting ----
 def plot_predictions(sample, probability):
     """Out-of-fold P(accreted) in the age-metallicity plane, against the true labels."""
     figure, axis = plt.subplots(figsize=(7.5, 5.5))
+    # Plotted in the plane the model actually works in. Age and metallicity are not
+    # used by this arm and are missing for most of these clusters anyway.
     points = axis.scatter(
-        sample['FeH_vdb'], sample['Age_vdb'], c=probability,
+        sample['V_phi'], sample['R_Apo'], c=probability,
         cmap='coolwarm', vmin=0, vmax=1, s=70,
         edgecolors=['darkred' if a else 'navy' for a in sample['accreted']],
         linewidths=1.6,
     )
     figure.colorbar(points, ax=axis, label='predicted P(accreted)')
-    axis.set_xlabel('[Fe/H] (dex)')
-    axis.set_ylabel('Age (Gyr)')
+    axis.set_yscale('log')
+    axis.axvline(0, color='grey', linestyle=':', linewidth=1)
+    axis.set_xlabel(r'$V_\phi$ (km/s)')
+    axis.set_ylabel('apocentre (kpc)')
     axis.set_title('Out-of-fold predictions (fill) vs true label (edge:'
                    ' red = accreted, blue = in-situ)', fontsize=10)
     axis.grid(alpha=0.3)
@@ -228,34 +251,23 @@ def classify_all(merged, output_path=None):
     from config import PROJECT_ROOT
     output_path = output_path or PROJECT_ROOT / 'results' / 'classifications.csv'
 
-    stellar = merged.dropna(subset=REQUIRED_COLUMNS).reset_index(drop=True)
-    orbital = merged.dropna(subset=ORBITAL_REQUIRED).reset_index(drop=True)
+    sample = merged.dropna(subset=REQUIRED_COLUMNS).reset_index(drop=True)
+    _, _, probability = evaluate(sample, DEFAULT_FEATURES, tune_threshold=True)
 
-    # Two models, because they answer different questions. The orbital one covers far
-    # more clusters but mostly re-derives Belokurov & Kravtsov's own boundary; the
-    # stellar one is the independent opinion.
-    _, _, p_orbital = evaluate(orbital, ORBITAL_ONLY, tune_threshold=True)
-    _, _, p_stellar = evaluate(stellar, FEATURE_SETS['stellar population only'],
-                               tune_threshold=True)
-
-    table = orbital[['ID', 'Name', 'FeH_vdb', 'Age_vdb', 'R_gc', 'V_phi', 'ecc',
-                     'accreted', 'Comment_bk24']].copy()
-    table['p_accreted_orbital'] = p_orbital
-    table = table.merge(
-        stellar[['ID']].assign(p_accreted_stellar=p_stellar), on='ID', how='left',
-    )
-    table['our_class'] = np.where(table['p_accreted_orbital'] > 0.5,
-                                  'accreted', 'in-situ')
+    table = sample[['ID', 'Name', 'FeH_harris', 'Age_vdb', 'R_gc', 'V_phi', 'ecc',
+                    'accreted', 'Comment_bk24']].copy()
+    table['p_accreted'] = probability
+    table['our_class'] = np.where(probability > 0.5, 'accreted', 'in-situ')
     table['reference_class'] = np.where(table['accreted'] == 1, 'accreted', 'in-situ')
     table['agrees'] = table['our_class'] == table['reference_class']
 
     output_path.parent.mkdir(exist_ok=True)
-    table.sort_values('p_accreted_orbital', ascending=False).to_csv(
+    table.sort_values('p_accreted', ascending=False).to_csv(
         output_path, index=False, float_format='%.4f',
     )
 
     accreted_count = int((table['our_class'] == 'accreted').sum())
-    print(f'\n--- Classification of all {len(table)} clusters with orbits ---')
+    print(f'\n--- Classification of all {len(table)} clusters ---')
     print(f'  accreted : {accreted_count:3d}  ({100 * accreted_count / len(table):.0f} per cent)')
     print(f'  in-situ  : {len(table) - accreted_count:3d}')
     print(f'  disagreements with Belokurov & Kravtsov: {int((~table["agrees"]).sum())}')
@@ -268,9 +280,58 @@ def classify_all(merged, output_path=None):
             flag = ' (they flagged it too)' if pd.notna(r['Comment_bk24']) else ''
             print(f'    {r["ID"]:<12s} we say {r["our_class"]:<9s}'
                   f' they say {r["reference_class"]:<9s}'
-                  f' P={r["p_accreted_orbital"]:.3f}{flag}')
+                  f' P={r["p_accreted"]:.3f}{flag}')
 
     return table
+
+
+# ---- 3.6 Held-out test on clusters discovered after Harris ----
+# Everything above is cross-validated, which measures generalisation within one sample.
+# This is a true holdout: clusters the model has never seen in any fold, and which sit at
+# the edges of the feature distribution with measurement errors several times worse.
+
+def holdout_check(merged):
+    """Train on the full sample, then predict clusters absent from Harris entirely."""
+    from data_prep import load_holdout_clusters
+
+    train = merged.dropna(subset=REQUIRED_COLUMNS).reset_index(drop=True)
+    holdout = load_holdout_clusters(merged)
+    if holdout.empty:
+        return None
+
+    y_train = train['accreted'].to_numpy().astype(int)
+    x_train = build_feature_matrix(train, (0.0, 0.0))[:, DEFAULT_FEATURES]
+    x_test = build_feature_matrix(holdout, (0.0, 0.0))[:, DEFAULT_FEATURES]
+    centre, spread = x_train.mean(axis=0), x_train.std(axis=0)
+    spread[spread == 0] = 1.0
+
+    weights = fit_logistic_regression((x_train - centre) / spread, y_train)
+    train_probability = predict_logistic(weights, (x_train - centre) / spread)
+    cut = best_threshold(y_train, train_probability)
+    probability = predict_logistic(weights, (x_test - centre) / spread)
+
+    y_test = holdout['accreted'].to_numpy().astype(int)
+    scores = classification_scores(y_test, (probability > cut).astype(int), probability)
+
+    print(f'\n--- Held-out test: {len(holdout)} clusters absent from Harris ---')
+    print(f'  trained on {len(train)}, none of these seen in any fold')
+    for (_, row), p in sorted(zip(holdout.iterrows(), probability), key=lambda t: -t[1]):
+        truth = 'accreted' if row['accreted'] == 1 else 'in-situ'
+        predicted = 'accreted' if p > cut else 'in-situ'
+        flag = '' if truth == predicted else '   <-- WRONG'
+        print(f'    {row["Name"]:<16}{truth:<10}{predicted:<10}P={p:.3f}{flag}')
+    print(f'  correct: {scores["tp"] + scores["tn"]}/{len(holdout)},'
+          f' balanced accuracy {scores["balanced_accuracy"]:.3f}')
+
+    # The caveat that matters more than the score: these clusters have far worse
+    # astrometry, and the model reports the same confidence regardless.
+    train_error = (train['Delta_R_Apo'] / train['R_Apo']).median()
+    holdout_error = (holdout['Delta_R_Apo'] / holdout['R_Apo']).median()
+    print(f'  fractional apocentre error: {holdout_error:.3f} here vs'
+          f' {train_error:.3f} in training')
+    print(f'  mean confidence |P-0.5|: {np.abs(probability - 0.5).mean():.3f} here vs'
+          f' {np.abs(train_probability - 0.5).mean():.3f} in training')
+    return holdout.assign(p_accreted=probability), scores
 
 
 def method_design(merged):
@@ -283,7 +344,7 @@ def method_design(merged):
     accreted = sample['accreted'].to_numpy().astype(int)
 
     print(f'\nLabelled clusters in Harris:   {int(merged["accreted"].notna().sum())}')
-    print(f'With the full feature vector:  {len(sample)}'
+    print(f'With the model feature vector: {len(sample)}'
           f'  ({int(accreted.sum())} accreted, {int((1 - accreted).sum())} in-situ)')
 
     scores, weights, probability = evaluate(sample, DEFAULT_FEATURES)
@@ -294,7 +355,7 @@ def method_design(merged):
     print(f'\n--- {N_FOLDS}-fold stratified cross-validation ---')
     print(f'{"":<22}{"bal acc":>9}{"recall":>8}{"AUC":>7}')
     print('-' * 46)
-    for label, r in [('majority baseline', baseline), ('logistic (3 feat)', scores)]:
+    for label, r in [('majority baseline', baseline), ('logistic (4 feat)', scores)]:
         auc = f'{r["roc_auc"]:.3f}' if r['roc_auc'] is not None else '   -  '
         print(f'{label:<22}{r["balanced_accuracy"]:>9.3f}{r["recall"]:>8.3f}{auc:>7}')
     print(f'\nConfusion (accreted = positive):  TP={scores["tp"]} FP={scores["fp"]}'
@@ -313,4 +374,5 @@ def method_design(merged):
 
     plot_predictions(sample, probability)
     classify_all(merged)
+    holdout_check(merged)
     return sample, scores
