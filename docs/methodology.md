@@ -1,9 +1,24 @@
 # Classification method
 
-The chosen method is a logistic regression on a designed feature vector, implemented in
-`src/method_design.py`. A two-parameter rule-based classifier was built and scored first
-and is kept in `src/rule_baseline.py`, because it is the comparison that justifies
-choosing the heavier model.
+The project uses **two models**, one per kind of input the assignment specification
+names.
+
+| arm | model | inputs | n |
+|---|---|---|---|
+| stellar population | dividing line in the age-metallicity plane (`src/rule_baseline.py`) | ages, metallicities | 55 |
+| dynamical | logistic regression on orbital quantities (`src/method_design.py`) | orbits | 151 |
+
+Splitting them this way is deliberate. The specification asks for metallicities, ages and
+dynamical information to be used, and no single model can use all three on a useful
+sample: VandenBerg's ages exist for only 55 clusters, while orbits reach 151. Forcing
+ages into the dynamical model would discard 96 clusters, and dropping the stellar arm
+entirely would mean never using ages at all. Running both covers every named input and
+keeps each model on the largest sample its own features allow.
+
+The stellar arm matters for a second reason. It is the only result here that does not
+depend on orbital quantities, and the reference labels were themselves defined from
+orbital energy and angular momentum. Everything the dynamical arm achieves is therefore
+partly circular; the stellar arm is not.
 
 ## What the classifier is scored against
 
@@ -30,15 +45,18 @@ distance feature is really measuring".
 |---|---|
 | Harris clusters | 157 |
 | with a Belokurov & Kravtsov label | 151 |
-| with age, [Fe/H], position and a label | **55** (25 accreted, 30 in-situ) |
+| with orbits and a label (dynamical arm) | **151** (53 accreted, 98 in-situ) |
+| with ages, metallicity and a label (stellar arm) | **55** (25 accreted, 30 in-situ) |
 
 Fourteen labelled clusters do not match anything in Harris: Gran 1 to 5, VVV-CL001,
 VVV-CL160, Patchick 126, FSR 1716, FSR 1758, Laevens 3, Crater, Sagittarius II,
 ESO 452-SC11 and BH 140. All are discoveries postdating the 2010 Harris edition, so this
 is a limitation of the catalogue rather than a failure of the name matching.
 
-The working sample of 55 clusters is the binding constraint on every result below. It is
-set by the age coverage in VandenBerg et al. (2013), not by the labels.
+The two arms are capped by different things. The dynamical arm reaches 151, limited only
+by the six clusters with no orbital data at all. The stellar arm is held to 55 by the age
+coverage in VandenBerg et al. (2013), which is the binding constraint on every result
+that uses ages.
 
 ## Evaluation protocol
 
@@ -57,90 +75,103 @@ split at n = 55 is noisy enough to move balanced accuracy by several points.
 Three metrics are reported: balanced accuracy, recall on the accreted class, and ROC
 AUC. The confusion counts are given alongside them.
 
-## Feature vector
+## Feature vector, dynamical arm
 
-| feature | reasoning | kept |
-|---|---|---|
-| `FeH` | accreted clusters form in lower-mass progenitors, which are less chemically enriched, so they are metal-poorer on average | yes |
-| `delta_age` | age residual about the age-metallicity trend. Age and [Fe/H] are strongly correlated across the sample, so raw age largely restates [Fe/H]. The residual isolates whether a cluster is old or young for its metallicity, which is the part that separates the populations | yes |
-| `log_R_gc` | in-situ clusters concentrate within roughly 10 kpc. Taken as a log because R_gc spans two decades | yes |
-| `flattening` | \|Z\|/R_gc, which is dimensionless and independent of distance. It is near 0 for a disc-aligned orbit and 0.5 or above for an isotropic halo orbit | no |
-| `HBtype` | the second-parameter effect reddens the horizontal branch with younger age at fixed [Fe/H], making it an indirect age proxy | no |
+| feature | reasoning |
+|---|---|
+| `V_phi` | azimuthal velocity. In-situ clusters rotate with the disc, accreted ones do not |
+| `Lz` | vertical angular momentum, one of the two axes the reference classification uses |
+| `ecc` | orbital eccentricity. Accreted clusters arrive on more radial orbits |
+| `log_R_Apo` | log apocentre, which stands in for orbital energy |
 
-The last two were argued for on physical grounds and both failed empirically. `HBtype`
-scores 0.463 AUC on its own, which is below chance, and `flattening` changes the full
-model by -0.001 AUC. Both are still computed by `build_feature_matrix` so that the
-ablation can keep demonstrating this. 
+Three candidates were tested and dropped. `delta_age`, the age residual about the
+age-metallicity trend, is the strongest stellar feature available at 0.884 AUC alone, but
+it exists for only 55 clusters and was holding the whole model to that sample. It now
+lives in the stellar arm, where ages are the point rather than a constraint. `HBtype`
+scores 0.463 alone, below chance, and `flattening` moved the model by -0.001.
 
-Mean standardised coefficients are `log_R_gc` +1.91, `delta_age` -1.20 and `FeH` -0.37.
-The signs are physically consistent: greater distance and younger-than-trend both push a
-cluster towards the accreted class.
+`FeH` was in the vector briefly and removed once the ablation showed it adds nothing over
+the orbital features. Metallicity now appears only in the stellar arm.
 
 ## Results
 
-| | balanced accuracy | recall | AUC |
-|---|---|---|---|
-| majority baseline | 0.500 | 0.000 | n/a |
-| **logistic regression** | 0.870 | 0.840 | **0.977** |
-| rule-based baseline | 0.893 | 0.920 | 0.912 |
+| | n | balanced accuracy | recall | AUC |
+|---|---|---|---|---|
+| majority baseline | 151 | 0.500 | 0.000 | n/a |
+| **dynamical arm** | 151 | 0.981 | 0.962 | 0.998 |
+| **stellar population arm** | 55 | 0.893 | 0.920 | 0.912 |
 
-Confusion counts, treating accreted as positive: the logistic model gives 21 true
-positives, 3 false positives, 4 false negatives and 27 true negatives, and the rule
-gives 23, 4, 2 and 26 respectively.
+Confusion counts, accreted as positive: the dynamical arm gives 51 true positives, 0
+false positives, 2 false negatives and 98 true negatives. The stellar arm gives 23, 4, 2
+and 26.
 
-The fitted rule-based boundary is `Age = -1.47 * [Fe/H] + 9.67 Gyr`, classifying clusters
-below the line as accreted.
+The stellar arm's fitted boundary is `Age = -1.47 * [Fe/H] + 9.67 Gyr`, classifying
+clusters below the line as accreted.
 
-Across 20 fold seeds the two methods are indistinguishable on balanced accuracy, at
-0.884 (sd 0.016) for the logistic model against 0.884 (sd 0.019) for the rule, with the
-rule ahead on 10 of 20 seeds. The rule is the better of the two on recall, at 0.890
-against 0.850, winning on 13 of 20 seeds and losing on 2. On AUC the logistic model wins on 20 of 20, at
-0.971 (sd 0.004) against 0.928 (sd 0.011).
+Applied across the catalogue, the dynamical arm classifies **51 of 151 clusters as
+accreted, 34 per cent**, against the 35 per cent reported by Belokurov & Kravtsov. The
+two disagree on two clusters, NGC 5053 and Pal 5, both borderline.
 
-Those three metrics disagree, and that disagreement is the result rather than a problem
-with it. The case for the logistic model rests on AUC: it orders the clusters better,
-but converts that ordering into worse decisions at the default 0.5 threshold. Tuning the
-threshold is the obvious next step and should recover the decision quality without
-changing the model. Reported on balanced accuracy alone, the two methods would look
-equivalent and the simpler rule would be the reasonable choice.
+The two arms are not directly comparable, because they run on different samples and
+different inputs. The dynamical arm is far more accurate, but see below for why that is
+less impressive than it looks.
 
-## What the distance feature is really measuring
+## Held-out test
 
-Feature ablation, reporting AUC averaged over 10 fold seeds:
+The 14 clusters Belokurov & Kravtsov label but Harris does not contain, all discovered
+after the 2010 Harris edition, never enter the pipeline and so were never trained on.
+Trained on 151 and asked to classify those 14 cold, the dynamical arm gets **14 of 14
+correct**, including one cluster outside the training range in `V_phi` and another outside
+it in `ecc`. Reproduced by `holdout_check` in `src/method_design.py`.
 
-| feature set | AUC |
-|---|---|
-| default: FeH, delta_age, log_R_gc | 0.971 |
-| all five | 0.970 |
-| **log_R_gc alone** | **0.974** |
-| stellar population only: FeH, delta_age | 0.929 |
-| delta_age alone | 0.884 |
+This measures generalisation on data the model never touched, unlike the cross-validated
+figures. It demonstrates fidelity to the published method, not to the truth, and it
+exposed the model's main weakness: these clusters have a median fractional apocentre error
+of 0.145 against 0.031 in training, yet the model reports essentially the same confidence.
 
-Galactocentric distance on its own outperforms the entire designed feature vector. This
-is not a result in favour of the model.
+## What the dynamical arm is really measuring
 
-The correlation between `log R_gc` and the label is 0.794, and the reason is structural
-rather than astrophysical. The reference labels are defined by orbital energy, and
-orbital energy is largely set by how far from the Galactic centre a cluster sits. A
-classifier built on `R_gc` is therefore recovering a good part of the definition of the
-labels rather than discovering anything independent. Reporting 0.977 without that
-qualification would overstate the result.
+Feature ablation, AUC averaged over 10 fold seeds:
 
-The defensible figure is the stellar population variant, at 0.929 AUC using no orbital
-information at all. That is also the figure that answers the assignment specification,
-which asks for accreted clusters to be identified from stellar populations and dynamics
-rather than from a reconstruction of someone else's orbital cut.
+| feature set | AUC | n |
+|---|---|---|
+| orbital features (the dynamical arm) | 0.999 | 151 |
+| `log_R_Apo` alone | 0.995 | 151 |
+| with `FeH` added back | 0.998 | 149 |
+| `FeH` alone | 0.769 | 149 |
+| FeH + delta_age, no orbital information | 0.928 | 55 |
+| `delta_age` alone | 0.884 | 55 |
+
+Two things fall out of this and both belong in the report.
+
+**Metallicity contributes nothing to the dynamical arm, so it was removed.** Orbital
+features alone score 0.999 and apocentre by itself reaches 0.995. Taking `FeH` out also
+gained the two clusters with no published Harris metallicity and lifted balanced accuracy
+from 0.966 to 0.981.
+
+**The near-perfect score is close to circular.** The reference labels are defined from
+orbital energy and angular momentum, and apocentre is a direct stand-in for energy. A
+model handed those quantities is re-deriving the boundary that produced the labels rather
+than discovering anything independent. Quoting 0.998 without that qualification would
+overstate the result considerably.
+
+This is why the stellar arm is kept. At 0.912 AUC on 55 clusters, using no orbital
+information whatsoever, it is the only evidence here that the two populations differ in
+their stellar content rather than merely in their orbits. The ablation row showing
+`delta_age` alone at 0.884 makes the same point: age carries real information about
+accretion independent of dynamics.
 
 ## Next steps
 
-1. Tune the decision threshold. The gap between AUC and balanced accuracy indicates
-   performance available without any change to the features or the model.
-2. Decide how the ablation is presented. The recommendation is to lead with the stellar
-   population result and treat the jump from `R_gc` as a finding about what the reference
-   labels encode.
-3. The sample is capped at 55 by VandenBerg's age coverage. Harris Part II would supply
-   [Fe/H] for all 157 clusters but no ages, so it does not lift the constraint. Whether a
-   second age catalogue is worth pursuing is an open question.
-4. Nothing here addresses the rotation question in the specification, which requires the
-   azimuthal velocity V_phi and therefore Gaia proper motions. The options are to add a
-   kinematic dataset or to scope the question out and justify that decision.
+1. Propagate the apocentre uncertainty into the prediction. The held-out test showed the
+   model reports the same confidence on data five times worse, which is its main weakness.
+2. A second age catalogue is the only way to lift the stellar arm past 55 clusters, and
+   that arm carries the one non-circular result in the project. Krause ages were tested
+   and rejected: calibrating them onto the VandenBerg scale leaves 0.66 Gyr of residual
+   scatter for only 9 extra clusters.
+3. Chemical abundances, specifically [Al/Fe] and [Mg/Fe], would give a third axis
+   independent of both arms. The catch is that [Al/Fe] is what Belokurov & Kravtsov
+   calibrated their boundary with, so it is not as independent as it first appears.
+4. Threshold tuning is implemented but makes balanced accuracy slightly worse, 0.970
+   against 0.981 untuned, because it overfits the training folds. Worth either improving
+   or dropping rather than leaving in place unused.
