@@ -155,20 +155,20 @@ Now we have a good feel of the data, and of our objectives. In the time leading 
 
 #### Action Items
 **Data preparation**
-- [ ] Standardise cluster names across the three datasets (e.g. I read that `NGC 104` and `47 Tuc` refer to the same cluster!), then merge Harris, Krause and VandenBerg into a single dataframe.
-- [ ] Handle missing values and check units.
+- [x] Standardise cluster names across the three datasets (e.g. I read that `NGC 104` and `47 Tuc` refer to the same cluster!), then merge Harris, Krause and VandenBerg into a single dataframe.
+- [x] Handle missing values and check units.
 
 **Ground truth**
-- [ ] Read the reference paper and see if it has any classifications of its own so we can use it as 'ground truth.'
+- [x] Read the reference paper and see if it has any classifications of its own so we can use it as 'ground truth.'
 
 **Exploratory analysis**
-- [ ] Plot the age-metallicity relation (`Age` vs `FeH`) and check whether it splits into two branches. Do research into what to expect.
-- [ ] Compare the spatial and kinematic distributions (`R_gc`, `Z`, `v_r`) of the labelled groups. Again, do research into what to expect.
-- [ ] Compare structural properties (`rh`, `C5`, `c`, `HBtype`) between the labelled groups to see which features separate them.
+- [x] Plot the age-metallicity relation (`Age` vs `FeH`) and check whether it splits into two branches. Do research into what to expect.
+- [x] Compare the spatial and kinematic distributions (`R_gc`, `Z`, `v_r`) of the labelled groups. Again, do research into what to expect.
+- [x] Compare structural properties (`rh`, `C5`, `c`, `HBtype`) between the labelled groups to see which features separate them.
 
 **Method design**
-- [ ] Propose at least one rule-based classifier (e.g. a dividing line in the age-metallicity plane) and at least one data-driven approach (e.g. clustering or logistic regression on the selected features).
-- [ ] Define how we'll evaluate each method against the reference labels (e.g. accuracy, confusion matrix), with the small sample size in mind.
+- [x] Propose at least one rule-based classifier (e.g. a dividing line in the age-metallicity plane) and at least one data-driven approach (e.g. clustering or logistic regression on the selected features).
+- [x] Define how we'll evaluate each method against the reference labels (e.g. accuracy, confusion matrix), with the small sample size in mind.
 
 **Next meeting**
 - [ ] Present the merged dataset, key plots and proposed methods, and agree on which method(s) to develop further.
